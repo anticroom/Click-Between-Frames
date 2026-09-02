@@ -44,3 +44,4 @@ void windowsSetup();
 void linuxCheckInputs();
 void rawInputThread();
 void showLinuxInputError();
+void setThreadPriority(bool high);

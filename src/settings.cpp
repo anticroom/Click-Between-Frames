@@ -1,4 +1,5 @@
 #include "settings.hpp"
+#include "log.hpp"
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -27,7 +28,9 @@ static const std::pair<const char*, const char*> DEFAULTS[] = {
 	{ "late-cutoff", "false" },
 	{ "thread-priority", "false" },
 	{ "wine-workaround", "true" },
-	{ "right-click", "false" }
+	{ "right-click", "false" },
+	{ "p1-jump-keys", "space" },
+	{ "p2-jump-keys", "up" } // p2, and p1 jump keys for compatibility with customkeybind ports
 };
 
 extern HMODULE g_module;
@@ -75,12 +78,14 @@ std::string settings::getString(const std::string& key, const std::string& defau
 
 void settings::setBool(const std::string& key, bool value) {
 	g_values[key] = value ? "true" : "false";
-	save();
 }
 
 void settings::save() {
 	std::ofstream out(g_path);
-	if (!out) return;
+	if (!out) {
+		cbf::log::error("Could not write %s", g_path.c_str());
+		return;
+	}
 	out << "; Click Between Frames 2.1" << std::endl;
 	for (auto& [key, value] : g_values) out << key << " = " << value << std::endl;
 }

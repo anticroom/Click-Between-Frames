@@ -19,6 +19,13 @@ TimestampType getCurrentTimestamp() {
 LPVOID pBuf;
 HANDLE hSharedMem = NULL;
 HANDLE hMutex = NULL;
+static HANDLE inputThreads[2] = { NULL, NULL };
+void setThreadPriority(bool high) {
+	threadPriority = high;
+	for (HANDLE thread : inputThreads) {
+		if (thread) SetThreadPriority(thread, high ? THREAD_PRIORITY_HIGHEST : THREAD_PRIORITY_NORMAL);
+	}
+}
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	LARGE_INTEGER time;
@@ -572,7 +579,12 @@ void windowsSetup() {
 	}
 
 	if (!linuxNative) {
-		std::thread(rawInputThread).detach();
-		std::thread(xinputThread).detach();
+		std::thread raw(rawInputThread);
+		inputThreads[0] = raw.native_handle();
+		raw.detach();
+
+		std::thread xinput(xinputThread);
+		inputThreads[1] = xinput.native_handle();
+		xinput.detach();
 	}
 }

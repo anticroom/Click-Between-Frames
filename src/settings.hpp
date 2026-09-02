@@ -9,7 +9,7 @@ namespace settings {
 	bool getBool(const std::string& key, bool defaultValue);
 	std::string getString(const std::string& key, const std::string& defaultValue);
 
-	void setBool(const std::string& key, bool value);
+	void setBool(const std::string& key, bool value); // calls save() once finished
 	void save();
 
 	void setSavedBool(const std::string& key, bool value);

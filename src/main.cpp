@@ -6,6 +6,7 @@
 #include <cmath>
 #include <algorithm>
 #include <string>
+#include <unordered_map>
 
 #include <MinHook.h>
 
@@ -140,18 +141,56 @@ Step popStepQueue() {
 
 	return front;
 }
+static size_t keyFromName(const std::string& name) {
+	static const std::pair<const char*, size_t> NAMES[] = {
+		{ "space", KEY_Space }, { "up", KEY_Up }, { "down", KEY_Down },
+		{ "left", KEY_Left }, { "right", KEY_Right }, { "enter", KEY_Enter },
+		{ "shift", KEY_Shift }, { "control", KEY_Control }, { "ctrl", KEY_Control },
+		{ "alt", KEY_Alt }, { "tab", KEY_Tab }
+	};
+
+	std::string key = name;
+	key.erase(0, key.find_first_not_of(" 	"));
+	key.erase(key.find_last_not_of(" 	") + 1);
+	std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+	if (key.empty()) return 0;
+
+	for (auto& [text, code] : NAMES) if (key == text) return code;
+	if (key.size() == 1) { // a key is its own vkey
+		char c = static_cast<char>(::toupper(key[0]));
+		if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) return c;
+	}
+	if (key.size() > 2 && key[0] == '0' && key[1] == 'x') return strtoul(key.c_str(), nullptr, 16);
+	if (isdigit(key[0])) return strtoul(key.c_str(), nullptr, 10);
+
+	cbf::log::error("Unknown key name \"%s\"", name.c_str());
+	return 0;
+}
+
+static void parseKeyList(std::unordered_set<size_t>& binds, const std::string& list) {
+	size_t start = 0;
+	while (start <= list.size()) {
+		size_t end = list.find(',', start);
+		if (end == std::string::npos) end = list.size();
+		size_t code = keyFromName(list.substr(start, end - start));
+		if (code) binds.emplace(code);
+		start = end + 1;
+	}
+}
 
 /*
 send list of keybinds to the input thread.
-2.1 has no rebindable controls, so this is just what vanilla UILayer::keyDown reacts to
+2.1 has no rebindable controls of its own so the jump keys come from the ini
 */
 void updateKeybinds() {
 	std::array<std::unordered_set<size_t>, 6> binds;
 
 	enableRightClick.store(settings::getBool("right-click", false));
 
-	binds[p1Jump] = { KEY_Space, CONTROLLER_A, CONTROLLER_RB };
-	binds[p2Jump] = { KEY_Up, CONTROLLER_LB };
+	binds[p1Jump] = { CONTROLLER_A, CONTROLLER_RB };
+	binds[p2Jump] = { CONTROLLER_LB };
+	parseKeyList(binds[p1Jump], settings::getString("p1-jump-keys", "space"));
+	parseKeyList(binds[p2Jump], settings::getString("p2-jump-keys", "up"));
 
 	{
 		std::lock_guard lock(keybindsLock);
@@ -159,7 +198,30 @@ void updateKeybinds() {
 	}
 }
 
-// rewritten PlayerObject::resetCollisionLog() since its inlined in 2.113
+bool passThroughInput = false;
+int vanillaButtonCount = 0;
+bool vanillaButtonPlayer1 = true;
+std::unordered_map<int, bool> learnedKeys;
+
+static bool isBoundKey(int key) {
+	std::lock_guard lock(keybindsLock);
+	for (auto& binds : inputBinds) if (binds.contains(static_cast<size_t>(key))) return true;
+	return false;
+}
+static void learnKey(int key, bool down) {
+	if (down) {
+		if (vanillaButtonCount > 0) learnedKeys[key] = vanillaButtonPlayer1;
+		return;
+	}
+	auto learned = learnedKeys.find(key);
+	if (learned == learnedKeys.end()) return;
+	{
+		std::lock_guard lock(keybindsLock);
+		inputBinds[learned->second ? p1Jump : p2Jump].emplace(static_cast<size_t>(key));
+	}
+	cbf::log::info("found jump key %d for player %d", key, learned->second ? 1 : 2);
+	learnedKeys.erase(learned);
+}
 void decomp_resetCollisionLog(PlayerObject* p) {
 	p->m_collisionLogTop->removeAllObjects();
 	p->m_collisionLogBottom->removeAllObjects();
@@ -227,6 +289,17 @@ void onFrameStart() {
 		}
 	}
 }
+bool (__thiscall* CCKeyboardDispatcher_dispatchKeyboardMSG)(void*, int, bool);
+bool __fastcall CCKeyboardDispatcher_dispatchKeyboardMSG_H(void* self, void*, int key, bool down) {
+	if (isBoundKey(key)) return CCKeyboardDispatcher_dispatchKeyboardMSG(self, key, down);
+	passThroughInput = true;
+	vanillaButtonCount = 0;
+	bool result = CCKeyboardDispatcher_dispatchKeyboardMSG(self, key, down);
+	passThroughInput = false;
+	learnKey(key, down);
+
+	return result;
+}
 
 void (__thiscall* CCEGLView_pollEvents)(void*);
 void __fastcall CCEGLView_pollEvents_H(void* self, void*) {
@@ -252,12 +325,16 @@ void __fastcall PlayLayer_update_H(PlayLayer* self, void*, float dt) {
 // disable regular inputs while CBF is active
 void (__thiscall* GJBaseGameLayer_pushButton)(PlayLayer*, int, bool);
 void __fastcall GJBaseGameLayer_pushButton_H(PlayLayer* self, void*, int button, bool isPlayer1) {
-	if (enableInput) GJBaseGameLayer_pushButton(self, button, isPlayer1);
+	if (passThroughInput) {
+		vanillaButtonCount++;
+		vanillaButtonPlayer1 = isPlayer1;
+	}
+	if (enableInput || passThroughInput) GJBaseGameLayer_pushButton(self, button, isPlayer1);
 }
 
 void (__thiscall* GJBaseGameLayer_releaseButton)(PlayLayer*, int, bool);
 void __fastcall GJBaseGameLayer_releaseButton_H(PlayLayer* self, void*, int button, bool isPlayer1) {
-	if (enableInput) GJBaseGameLayer_releaseButton(self, button, isPlayer1);
+	if (enableInput || passThroughInput) GJBaseGameLayer_releaseButton(self, button, isPlayer1);
 }
 
 bool inputThisStep = false;
@@ -393,6 +470,13 @@ void __fastcall EndLevelLayer_customSetup_H(void* self, void*) {
 		reinterpret_cast<CCNode*>(self)->addChild(indicator);
 	}
 }
+// the saved settings live in GD's game variables, which are only readable once the game is up
+bool (__thiscall* MenuLayer_init)(void*);
+bool __fastcall MenuLayer_init_H(void* self, void*) {
+	if (!MenuLayer_init(self)) return false;	
+	syncSettingsFromGame();
+	return true;
+}
 
 // notify the player if theres an issue with input on Linux
 bool (__thiscall* CreatorLayer_init)(void*);
@@ -417,7 +501,8 @@ void applySetting(const char* key, bool value) {
 	else if (setting == "click-on-steps") clickOnSteps = value;
 	else if (setting == "mouse-fix") mouseFix = value;
 	else if (setting == "late-cutoff") lateCutoff = value;
-	else if (setting == "right-click") enableRightClick.store(value);
+	else if (setting == "right-click") { enableRightClick.store(value); updateKeybinds(); }
+	else if (setting == "thread-priority") setThreadPriority(value);
 	// thread-priority and wine-workaround are only read while the mod is loading
 }
 
@@ -452,12 +537,17 @@ void modLoaded() {
 	hook(base + 0x1FE3A0, &PlayLayer_showNewBest_H, &PlayLayer_showNewBest);
 	hook(base + 0x94CB0, &EndLevelLayer_customSetup_H, &EndLevelLayer_customSetup);
 	hook(base + 0x4DE40, &CreatorLayer_init_H, &CreatorLayer_init);
+	hook(base + 0x1907B0, &MenuLayer_init_H, &MenuLayer_init);
 
 	if (HMODULE cocos = GetModuleHandleA("libcocos2d.dll")) {
 		if (void* pollEvents = reinterpret_cast<void*>(GetProcAddress(cocos, "?pollEvents@CCEGLView@cocos2d@@QAEXXZ"))) {
 			hook(reinterpret_cast<uintptr_t>(pollEvents), &CCEGLView_pollEvents_H, &CCEGLView_pollEvents);
 		}
 		else cbf::log::error("Failed to find CCEGLView::pollEvents");
+		if (void* dispatch = reinterpret_cast<void*>(GetProcAddress(cocos, "?dispatchKeyboardMSG@CCKeyboardDispatcher@cocos2d@@QAE_NW4enumKeyCodes@2@_N@Z"))) {
+			hook(reinterpret_cast<uintptr_t>(dispatch), &CCKeyboardDispatcher_dispatchKeyboardMSG_H, &CCKeyboardDispatcher_dispatchKeyboardMSG);
+		}
+		else cbf::log::error("Failed to find CCKeyboardDispatcher::dispatchKeyboardMSG");
 	}
 
 	setupOptionsHook();

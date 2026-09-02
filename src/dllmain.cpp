@@ -16,6 +16,8 @@ DWORD WINAPI thread_func(void*) {
 
 BOOL APIENTRY DllMain(HMODULE handle, DWORD reason, LPVOID reserved) {
 	if (reason == DLL_PROCESS_ATTACH) {
+		if (CreateMutexA(nullptr, TRUE, "ClickBetweenFrames2.1") && GetLastError() == ERROR_ALREADY_EXISTS) return FALSE;
+
 		g_module = handle;
 		DisableThreadLibraryCalls(handle);
 
