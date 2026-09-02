@@ -20,7 +20,7 @@ jobs:
           submodules: recursive
 
       - name: Configure
-        run: cmake -B build -A Win32 -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+        run: cmake -B build -A Win32 "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
 
       - name: Build
         run: cmake --build build --config Release
