@@ -89,7 +89,3 @@ void settings::save() {
 	out << "; Click Between Frames 2.1" << std::endl;
 	for (auto& [key, value] : g_values) out << key << " = " << value << std::endl;
 }
-
-void settings::setSavedBool(const std::string& key, bool value) {
-	g_values[key] = value ? "true" : "false";
-}

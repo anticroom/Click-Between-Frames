@@ -11,6 +11,4 @@ namespace settings {
 
 	void setBool(const std::string& key, bool value); // calls save() once finished
 	void save();
-
-	void setSavedBool(const std::string& key, bool value);
 }

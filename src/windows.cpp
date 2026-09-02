@@ -519,7 +519,7 @@ void windowsSetup() {
 		std::string sys = sysname;
 		cbf::log::info("Wine %s", sys.c_str());
 
-		if (sys == "Linux") settings::setSavedBool("you-must-be-on-linux-to-change-this", true);
+		if (sys == "Linux") settings::setBool("you-must-be-on-linux-to-change-this", true);
 		if (sys == "Linux" && settings::getBool("wine-workaround", true)) { // background raw keyboard input doesn't work in Wine
 			linuxNative = true;
 			cbf::log::info("Linux native");
@@ -579,12 +579,13 @@ void windowsSetup() {
 	}
 
 	if (!linuxNative) {
+		HANDLE process = GetCurrentProcess();
 		std::thread raw(rawInputThread);
-		inputThreads[0] = raw.native_handle();
+		DuplicateHandle(process, raw.native_handle(), process, &inputThreads[0], 0, FALSE, DUPLICATE_SAME_ACCESS);
 		raw.detach();
 
 		std::thread xinput(xinputThread);
-		inputThreads[1] = xinput.native_handle();
+		DuplicateHandle(process, xinput.native_handle(), process, &inputThreads[1], 0, FALSE, DUPLICATE_SAME_ACCESS);
 		xinput.detach();
 	}
 }
