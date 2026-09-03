@@ -67,6 +67,9 @@ static int& toggleCount(void* layer) {
 static bool injectPending = false;
 
 void syncSettingsFromGame() {
+	static bool synced = false;
+	if (synced) return;
+	synced = true;
 	GameManager* gm = GameManager::sharedState();
 
 	seeding = true;

@@ -177,6 +177,7 @@ static void parseKeyList(std::unordered_set<size_t>& binds, const std::string& l
 		start = end + 1;
 	}
 }
+std::array<std::unordered_set<size_t>, 6> learnedBinds;
 
 /*
 send list of keybinds to the input thread.
@@ -187,13 +188,14 @@ void updateKeybinds() {
 
 	enableRightClick.store(settings::getBool("right-click", false));
 
-	binds[p1Jump] = { CONTROLLER_A, CONTROLLER_RB };
-	binds[p2Jump] = { CONTROLLER_LB };
-	parseKeyList(binds[p1Jump], settings::getString("p1-jump-keys", "space"));
-	parseKeyList(binds[p2Jump], settings::getString("p2-jump-keys", "up"));
+	binds[p1Jump] = { KEY_Space, CONTROLLER_A, CONTROLLER_RB };
+	binds[p2Jump] = { KEY_Up, CONTROLLER_LB };
+	parseKeyList(binds[p1Jump], settings::getString("p1-jump-keys", ""));
+	parseKeyList(binds[p2Jump], settings::getString("p2-jump-keys", ""));
 
 	{
 		std::lock_guard lock(keybindsLock);
+		for (size_t i = 0; i < binds.size(); i++) binds[i].insert(learnedBinds[i].begin(), learnedBinds[i].end());
 		inputBinds = binds;
 	}
 }
@@ -217,7 +219,9 @@ static void learnKey(int key, bool down) {
 	if (learned == learnedKeys.end()) return;
 	{
 		std::lock_guard lock(keybindsLock);
-		inputBinds[learned->second ? p1Jump : p2Jump].emplace(static_cast<size_t>(key));
+		int action = learned->second ? p1Jump : p2Jump;
+		inputBinds[action].emplace(static_cast<size_t>(key));
+		learnedBinds[action].emplace(static_cast<size_t>(key));
 	}
 	cbf::log::info("found jump key %d for player %d", key, learned->second ? 1 : 2);
 	learnedKeys.erase(learned);
