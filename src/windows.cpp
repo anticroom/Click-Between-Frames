@@ -154,6 +154,8 @@ void rawInputThread() {
 		return;
 	}
 
+	cbf::log::info("raw input registered"); // debug logging
+
 	if (threadPriority) SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
 	MSG msg;

@@ -131,8 +131,10 @@ Step popStepQueue() {
 		PlayLayer* playLayer = PlayLayer::get();
 
 		enableInput = true;
-		if (nextInput.inputState == Press) playLayer->pushButton(0, nextInput.isPlayer1);
-		else playLayer->releaseButton(0, nextInput.isPlayer1);
+		if (playLayer) {
+			if (nextInput.inputState == Press) playLayer->pushButton(0, nextInput.isPlayer1);
+			else playLayer->releaseButton(0, nextInput.isPlayer1);
+		}
 		enableInput = false;
 	}
 
@@ -257,6 +259,23 @@ void calculateSteps(float stepDelta) {
 	else if (frameDelta > 0.0) buildStepQueue(stepCount);
 	else skipUpdate = true;
 }
+static bool gameHasFocus() {
+	DWORD pid = 0;
+	GetWindowThreadProcessId(GetForegroundWindow(), &pid);
+
+	return pid == GetCurrentProcessId();
+}
+
+static void logIdleReason(PlayLayer* playLayer) {
+	static const char* REASONS[] = { "disabled in settings", "GD doesnt have keyboard focus", "paused", "on the endscreen" };
+	int reason = softToggle.load() ? 0 : !gameHasFocus() ? 1 : playLayer->m_isPaused ? 2 : 3;
+
+	static int lastReason = -1;
+	if (reason == lastReason) return;
+	lastReason = reason;
+
+	cbf::log::info("Not splitting steps: %s", REASONS[reason]);
+}
 
 void onFrameStart() {
 	PlayLayer* playLayer = PlayLayer::get();
@@ -266,11 +285,12 @@ void onFrameStart() {
 	}
 
 	if (softToggle.load() // CBF disabled
-		|| !GetFocus() // GD is minimized
+		|| !gameHasFocus() // GD is minimized
 		|| !playLayer // not in level
 		|| playLayer->m_isPaused // if paused
 		|| playLayer->m_hasLevelCompleteMenu) // if on endscreen
 	{
+		if (playLayer) logIdleReason(playLayer);
 		firstFrame = true;
 		skipUpdate = true;
 		enableInput = true;
@@ -436,6 +456,7 @@ void __fastcall PlayerObject_update_H(PlayerObject* self, void*, float stepDelta
 // update keybinds when you enter a level
 bool (__thiscall* PlayLayer_init)(PlayLayer*, void*);
 bool __fastcall PlayLayer_init_H(PlayLayer* self, void*, void* level) {
+	syncSettingsFromGame();
 	updateKeybinds();
 	return PlayLayer_init(self, level);
 }
@@ -490,6 +511,17 @@ bool __fastcall CreatorLayer_init_H(void* self, void*) {
 	showLinuxInputError();
 	return true;
 }
+void applyAnticheatFix() {
+	uint8_t* addr = reinterpret_cast<uint8_t*>(gdBase() + 0x202AAA);
+
+	DWORD old;
+	if (!VirtualProtect(addr, 1, PAGE_EXECUTE_READWRITE, &old)) {
+		cbf::log::error("failed to unprotect the anticheat check");
+		return;
+	}
+	*addr = 0xEB;
+	VirtualProtect(addr, 1, old, &old);
+}
 
 void toggleMod(bool disable) {
 	// 2.1 has no vanilla click-between-steps/click-on-steps to patch out, so there is nothing to disable here
@@ -525,6 +557,7 @@ void modLoaded() {
 	mouseFix = settings::getBool("mouse-fix", false);
 	lateCutoff = settings::getBool("late-cutoff", false);
 	threadPriority = settings::getBool("thread-priority", false);
+	applyAnticheatFix();
 
 	updateKeybinds();
 
