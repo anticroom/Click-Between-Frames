@@ -250,6 +250,15 @@ void calculateSteps(float stepDelta) {
 
 	stepCount = static_cast<int>(std::round((frameDelta * 60.0) / stepDelta));
 	if (stepCount < 1) stepCount = 1;
+	double expected = (frameDelta * 60.0) / std::round(std::max(4.0, frameDelta * 240.0));
+	if (std::fabs(expected - stepDelta) > stepDelta * 0.01) {
+		if (stepDelta * 4.0 < 0.999) stepCount = 4;
+		else {
+			skipUpdate = true;
+			firstFrame = true;
+			return;
+		}
+	}
 
 	if (pl->m_playerDied || GameManager::sharedState()->getEditorLayer() || softToggle.load()) {
 		enableInput = true;
@@ -429,8 +438,7 @@ void __fastcall PlayerObject_update_H(PlayerObject* self, void*, float stepDelta
 			PlayerObject_update(self, substepDelta);
 			if (!step.endStep) {
 				if (firstLoop && ((self->m_yVelocity < 0) ^ self->m_isUpsideDown)) self->m_isOnGround = p1StartedOnGround; // this fixes delayed inputs on platforms moving down for some reason
-				if (!self->m_isOnSlope || self->m_isDart) pl->checkCollisions(self, 0.0f); // moving platforms will launch u really high if this is anything other than 0.0, idk why
-				else pl->checkCollisions(self, stepDelta); // slopes will launch you really high if the 2nd argument is lower than like 0.01, idk why
+				pl->checkCollisions(self, stepDelta);
 				decomp_resetCollisionLog(self); // necessary for wave
 			}
 		}
@@ -440,8 +448,7 @@ void __fastcall PlayerObject_update_H(PlayerObject* self, void*, float stepDelta
 			PlayerObject_update(p2, substepDelta);
 			if (!step.endStep) {
 				if (firstLoop && ((p2->m_yVelocity < 0) ^ p2->m_isUpsideDown)) p2->m_isOnGround = p2StartedOnGround;
-				if (!p2->m_isOnSlope || p2->m_isDart) pl->checkCollisions(p2, 0.0f);
-				else pl->checkCollisions(p2, stepDelta);
+				pl->checkCollisions(p2, stepDelta);
 				decomp_resetCollisionLog(p2);
 			}
 		}
