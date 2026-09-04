@@ -181,10 +181,7 @@ static void parseKeyList(std::unordered_set<size_t>& binds, const std::string& l
 }
 std::array<std::unordered_set<size_t>, 6> learnedBinds;
 
-/*
-send list of keybinds to the input thread.
-2.1 has no rebindable controls of its own so the jump keys come from the ini
-*/
+// send list of keybinds to the input thread
 void updateKeybinds() {
 	std::array<std::unordered_set<size_t>, 6> binds;
 
@@ -341,7 +338,6 @@ void __fastcall CCEGLView_pollEvents_H(void* self, void*) {
 	CCEGLView_pollEvents(self);
 }
 
-// no getModifiedDelta in 2.1, so just record the delta and notice if the step loop didnt run
 void __fastcall PlayLayer_update_H(PlayLayer* self, void*, float dt) {
 	frameDelta = dt;
 	stepsBuilt = false;
@@ -438,7 +434,7 @@ void __fastcall PlayerObject_update_H(PlayerObject* self, void*, float stepDelta
 			PlayerObject_update(self, substepDelta);
 			if (!step.endStep) {
 				if (firstLoop && ((self->m_yVelocity < 0) ^ self->m_isUpsideDown)) self->m_isOnGround = p1StartedOnGround; // this fixes delayed inputs on platforms moving down for some reason
-				pl->checkCollisions(self, stepDelta);
+				pl->checkCollisions(self, stepDelta); // objects moving up will launch you really high if it's 0.0 but idfk why, THANK YOU ROBERT TOPHAT
 				decomp_resetCollisionLog(self); // necessary for wave
 			}
 		}
@@ -452,7 +448,7 @@ void __fastcall PlayerObject_update_H(PlayerObject* self, void*, float stepDelta
 				decomp_resetCollisionLog(p2);
 			}
 		}
-		else if (step.endStep && isDual) PlayerObject_update(p2, stepDelta); // 2.1 only updates P2 in dual mode
+		else if (step.endStep && isDual) PlayerObject_update(p2, stepDelta);
 
 		firstLoop = false;
 	} while (!step.endStep);
@@ -531,7 +527,6 @@ void applyAnticheatFix() {
 }
 
 void toggleMod(bool disable) {
-	// 2.1 has no vanilla click-between-steps/click-on-steps to patch out, so there is nothing to disable here
 	softToggle.store(disable);
 }
 
@@ -546,7 +541,6 @@ void applySetting(const char* key, bool value) {
 	else if (setting == "late-cutoff") lateCutoff = value;
 	else if (setting == "right-click") { enableRightClick.store(value); updateKeybinds(); }
 	else if (setting == "thread-priority") setThreadPriority(value);
-	// thread-priority and wine-workaround are only read while the mod is loading
 }
 
 static void hook(uintptr_t address, void* detour, void* trampoline) {

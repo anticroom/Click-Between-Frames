@@ -100,10 +100,9 @@ public:
 
 	static PlayLayer* get();
 
-	// 2.1 takes the delta in xmm2 and the player on the stack, so this needs a thunk
 	void checkCollisions(PlayerObject* player, float dt);
 
-	// 2.1's equivalent of GJBaseGameLayer::handleButton; the int argument is unused
+	// the int argument is unused
 	void pushButton(int button, bool isPlayer1) {
 		reinterpret_cast<void(__thiscall*)(PlayLayer*, int, bool)>(gdBase() + 0x111500)(this, button, isPlayer1);
 	}
