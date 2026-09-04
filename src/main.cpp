@@ -50,7 +50,6 @@ std::mutex keybindsLock;
 std::atomic<bool> enableRightClick;
 bool threadPriority;
 
-void (__thiscall* PlayLayer_update)(PlayLayer*, float);
 void (__thiscall* PlayerObject_update)(PlayerObject*, float);
 
 /*
@@ -244,6 +243,7 @@ bool stepsBuilt = false;
 void calculateSteps(float stepDelta) {
 	PlayLayer* pl = PlayLayer::get();
 	stepsBuilt = true;
+	frameDelta = *reinterpret_cast<float*>(reinterpret_cast<uintptr_t>(CCDirector::sharedDirector()) + 0x64);
 
 	stepCount = static_cast<int>(std::round((frameDelta * 60.0) / stepDelta));
 	if (stepCount < 1) stepCount = 1;
@@ -284,6 +284,15 @@ static void logIdleReason(PlayLayer* playLayer) {
 }
 
 void onFrameStart() {
+	if (!stepsBuilt) {
+		enableInput = true;
+		skipUpdate = true;
+		firstFrame = true;
+	}
+	stepsBuilt = false;
+
+	if (CCDirector::sharedDirector()->getRunningScene()) syncSettingsFromGame();
+
 	PlayLayer* playLayer = PlayLayer::get();
 
 	if (!lateCutoff) {
@@ -338,18 +347,6 @@ void __fastcall CCEGLView_pollEvents_H(void* self, void*) {
 	CCEGLView_pollEvents(self);
 }
 
-void __fastcall PlayLayer_update_H(PlayLayer* self, void*, float dt) {
-	frameDelta = dt;
-	stepsBuilt = false;
-
-	PlayLayer_update(self, dt);
-
-	if (!stepsBuilt) { // no physics steps happened this frame (dead, paused, level not started yet, ...)
-		enableInput = true;
-		skipUpdate = true;
-		firstFrame = true;
-	}
-}
 
 // disable regular inputs while CBF is active
 void (__thiscall* GJBaseGameLayer_pushButton)(PlayLayer*, int, bool);
@@ -566,7 +563,6 @@ void modLoaded() {
 
 	const uintptr_t base = gdBase();
 
-	hook(base + 0x2029C0, &PlayLayer_update_H, &PlayLayer_update);
 	hook(base + 0x1E8200, &PlayerObject_update_H, &PlayerObject_update);
 	hook(base + 0x111500, &GJBaseGameLayer_pushButton_H, &GJBaseGameLayer_pushButton);
 	hook(base + 0x111660, &GJBaseGameLayer_releaseButton_H, &GJBaseGameLayer_releaseButton);
