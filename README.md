@@ -1,41 +1,35 @@
-I'm not gonna bother updating the README for this mod since it's a bit of a mess, but here it is anyway.
-
 # Installation
 
-Install [Geode](https://geode-sdk.org/install/), then install this mod from the Geode index.
+This is a Click Between Frames port to GD 2.113. If you're using Megahack with your 2.1 install, place our DLL from releases into your /extensions/ folder to load on launch.
 
 # What does it do
 
 This mod allows your inputs to register in between visual frames, which drastically increases input precision on low framerates like 60FPS.
 
-If you like the mod, please consider [donating](https://www.paypal.com/donate/?hosted_button_id=U2LWN9H395TF8)!
-
-# Why not just use Click Between Steps?
-
-Because CBS is limited to 480TPS precision, while this mod does not have a hard limit on input precision (well, it technically does, but it's an extremely large number that would be hard to calculate). Also, this mod has a few fixes to improve the precision even further than Robtop's implementation, even if you ignore the 480TPS limit of Rob's version.
+If you like the mod, please consider [donating](https://www.paypal.com/donate/?hosted_button_id=U2LWN9H395TF8)! to the original CBF developer, this port doesn't take anything for itself. But if you would like to support me ontop of Sizzy too, then please [donate](https://www.denouementdemonlist.com/donate) to me as well! Any support to any of us is greatly appreciated.
 
 # How to use
 
 If the icon is automatically jumping when you respawn, disable the "Stop Triggers on Death" hack in Mega Hack.
 
-To edit keybinds, go to the GD options menu and click the "Keys" button in the top right (requires Custom Keybinds).
-
-It is recommended to use either Physics Bypass or one of these FPS values: 60, 80, 120, or 240. \
-This is because 2.2 has stutters on FPS values that aren't factors or multiples of 240 unless you enable Physics Bypass.
-
-Disable TPS Bypass/Draw Divide when using this mod, because they're pointless. \
-This mod automatically overrides the vanilla "Click On Steps" and "Click Between Steps" options, so you don't need to worry about those.
-
-The mod comes with its own version of Physics Bypass in the mod options (on Windows/Linux). Be warned that not all lists or leaderboards that allow CBF will consider this legit!
+Physics Bypass isn't included in this port.
 
 If on Linux, and the mod doesn't work, please try running the command <cr>sudo usermod -aG input $USER</c> (this will make your system slightly less secure).
+
+Logs get written to `ClickBetweenFrames.log` next to the dll. For issue reporting, please attach the log in your bug report.
 
 # Known issues
 
 - This mod does not work with bots
 - Linux controller support is experimental
 
+# Compiling
+
+If for some reason you want to compile this yourself, you'll need Git, CMake and MSVC (32-bit target, since GD is a 32-bit game). Clone the repo recursively (`--recursive`), then just run `build.bat`.
+
 # Credits
+
+Full Credit to the contributors of the orignal [Click Between Frames](https://github.com/theyareonit/Click-Between-Frames) repository for their original work copied for this port to be possible.
 
 Icon by alex/sincos.
 
