@@ -1,0 +1,8 @@
+{
+	"geode": "v1.3.10",
+	"version": "v1.0.2",
+	"id": "anticroom.click-between-frames",
+	"name": "Click Between Frames",
+	"developer": "anticroom, syzzi",
+	"description": "Allows inputs to register between frames."
+}

@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+env:
+  GEODE_SDK: ${{ github.workspace }}/geode-sdk
+  CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+
 jobs:
   build:
     runs-on: windows-latest
@@ -19,8 +23,29 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Checkout Geode SDK
+        uses: actions/checkout@v4
+        with:
+          repository: geode-sdk/geode
+          ref: v1.3.10
+          path: geode-sdk
+
+      - name: Setup Geode binaries and CLI
+        run: |
+          curl -sL -o geode.zip https://github.com/geode-sdk/geode/releases/download/v1.3.10/geode-v1.3.10-win.zip
+          mkdir geode-sdk/bin/1.3.10
+          tar -xf geode.zip -C geode-sdk/bin/1.3.10 Geode.lib
+          curl -sL -o cli.zip https://github.com/geode-sdk/cli/releases/download/v2.6.5/geode-cli-v2.6.5-win.zip
+          mkdir cli
+          tar -xf cli.zip -C cli
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64_x86
+
       - name: Configure
-        run: cmake -B build -A Win32 "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+        run: cmake -B build -T host=x64 -A Win32 "-DGEODE_CLI=${{ github.workspace }}/cli/geode.exe"
 
       - name: Build
         run: cmake --build build --config Release
@@ -29,7 +54,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ClickBetweenFrames
-          path: build/Release/ClickBetweenFrames.dll
+          path: |
+            build/Release/ClickBetweenFrames.dll
+            build/anticroom.click-between-frames.geode
           if-no-files-found: error
 
       - name: Move nightly tag
@@ -48,5 +75,7 @@ jobs:
             Automated build of `${{ github.sha }}`.
 
             ${{ github.event.head_commit.message }}
-          files: build/Release/ClickBetweenFrames.dll
+          files: |
+            build/Release/ClickBetweenFrames.dll
+            build/anticroom.click-between-frames.geode
           prerelease: true
