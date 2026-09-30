@@ -16,7 +16,7 @@ Physics Bypass isn't included in this port.
 
 If on Linux, and the mod doesn't work, please try running the command <cr>sudo usermod -aG input $USER</c> (this will make your system slightly less secure).
 
-Logs get written to `ClickBetweenFrames.log` next to the dll. For issue reporting, please attach the log in your bug report.
+Logs get written to `ClickBetweenFrames.log` next to the dll. For issue reporting, please attach the log in your bug report along with your mod list.
 
 # Known issues
 
