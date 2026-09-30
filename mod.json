@@ -1,8 +1,18 @@
 {
 	"geode": "v1.3.10",
+	"gd": {
+		"win": "2.113"
+	},
 	"version": "v1.0.2",
 	"id": "anticroom.click-between-frames",
 	"name": "Click Between Frames",
 	"developer": "anticroom, syzzi",
-	"description": "Allows inputs to register between frames."
+	"description": "Allows inputs to register between frames.",
+	"links": {
+		"source": "https://github.com/theyareonit/Click-Between-Frames"
+	},
+	"issues": {
+		"info": "Please attach ClickBetweenFrames.log from geode/unzipped/anticroom.click-between-frames when reporting a bug.",
+		"url": "https://github.com/anticroom/Click-Between-Frames/issues"
+	}
 }
