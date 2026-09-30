@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <string>
 #include <unordered_map>
+#include <intrin.h>
 
 #include <MinHook.h>
 #include <extensions2.h>
@@ -241,17 +242,17 @@ double frameDelta;
 bool stepsBuilt = false;
 
 // work the step count back out of the per step delta, so TPS/FPS bypasses still work
-void calculateSteps(float stepDelta) {
+void calculateSteps(float stepDelta, int gameSteps) {
 	PlayLayer* pl = PlayLayer::get();
 	stepsBuilt = true;
 	frameDelta = *reinterpret_cast<float*>(reinterpret_cast<uintptr_t>(CCDirector::sharedDirector()) + 0x64);
 
-	stepCount = static_cast<int>(std::round((frameDelta * 60.0) / stepDelta));
-	if (stepCount < 1) stepCount = 1;
-	double expected = (frameDelta * 60.0) / std::round(std::max(4.0, frameDelta * 240.0));
-	if (std::fabs(expected - stepDelta) > stepDelta * 0.01) {
-		if (stepDelta * 4.0 < 0.999) stepCount = 4;
-		else {
+	if (gameSteps > 0) stepCount = gameSteps;
+	else {
+		stepCount = static_cast<int>(std::round((frameDelta * 60.0) / stepDelta));
+		if (stepCount < 1) stepCount = 1;
+		double expected = (frameDelta * 60.0) / std::round(std::max(4.0, frameDelta * 240.0));
+		if (std::fabs(expected - stepDelta) > stepDelta * 0.01) {
 			skipUpdate = true;
 			firstFrame = true;
 			return;
@@ -395,7 +396,11 @@ void __fastcall PlayerObject_update_H(PlayerObject* self, void*, float stepDelta
 	}
 
 	// this is the first player update of the frame, so it's the earliest point the step count is known
-	if (pl && !stepsBuilt && stepDelta > 0.0f) calculateSteps(stepDelta);
+	if (pl && !stepsBuilt && stepDelta > 0.0f) {
+		uintptr_t ret = reinterpret_cast<uintptr_t>(_AddressOfReturnAddress());
+		int gameSteps = *reinterpret_cast<uintptr_t*>(ret) == gdBase() + 0x20316D ? *reinterpret_cast<int*>(ret + 0x30) : 0;
+		calculateSteps(stepDelta, gameSteps);
+	}
 
 	if (clickOnSteps && !stepQueue.empty()) {
 		Step step;
