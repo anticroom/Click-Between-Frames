@@ -55,7 +55,9 @@ enum ControllerKeyCodes : int {
 
 class PlayerObject {
 public:
-	char m_pad000[0x488];
+	char m_pad000[0x424];
+	CCPoint m_lastPosition;
+	char m_pad42C[0x488 - 0x42C];
 	CCDictionary* m_collisionLogBottom;   // 0x488
 	CCDictionary* m_collisionLogTop;      // 0x48C
 	char m_pad490[0x4B8 - 0x490];
@@ -80,6 +82,10 @@ public:
 	CCArray* m_touchingRings;             // 0x66C
 	char m_pad670[0x67C - 0x670];
 	CCPoint m_position;                   // 0x67C
+	char m_pad684[0x9D0 - 0x684];
+	int m_jBlockTimer;                    // 0x9D0
+	int m_dBlockTimer;                    // 0x9D4
+	int m_hBlockTimer;                    // 0x9D8
 };
 
 class PlayLayer {

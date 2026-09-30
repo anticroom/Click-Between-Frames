@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include <MinHook.h>
+#include <extensions2.h>
 
 constexpr double SMALLEST_FLOAT = std::numeric_limits<float>::min();
 
@@ -368,6 +369,21 @@ bool p1Split = false;
 bool p2Split = false;
 bool midStep = false;
 
+void splitUpdate(PlayerObject* p, float delta, bool firstUpdate, CCPoint& stepStart) {
+	if (firstUpdate) {
+		PlayerObject_update(p, delta);
+		stepStart = p->m_lastPosition;
+		return;
+	}
+
+	int j = p->m_jBlockTimer, d = p->m_dBlockTimer, h = p->m_hBlockTimer;
+	PlayerObject_update(p, delta);
+	p->m_jBlockTimer = j;
+	p->m_dBlockTimer = d;
+	p->m_hBlockTimer = h;
+	p->m_lastPosition = stepStart;
+}
+
 // split a single step based on the entries in stepQueue
 void __fastcall PlayerObject_update_H(PlayerObject* self, void*, float stepDelta) {
 	PlayLayer* pl = PlayLayer::get();
@@ -421,14 +437,17 @@ void __fastcall PlayerObject_update_H(PlayerObject* self, void*, float stepDelta
 
 	Step step;
 	bool firstLoop = true;
+	CCPoint p1StepStart, p2StepStart;
 	midStep = true;
 
 	do {
 		step = popStepQueue();
 		const float substepDelta = stepDelta * step.deltaFactor;
 
+		if (pl->m_playerDied) continue;
+
 		if (p1Split) {
-			PlayerObject_update(self, substepDelta);
+			splitUpdate(self, substepDelta, firstLoop, p1StepStart);
 			if (!step.endStep) {
 				if (firstLoop && ((self->m_yVelocity < 0) ^ self->m_isUpsideDown)) self->m_isOnGround = p1StartedOnGround; // this fixes delayed inputs on platforms moving down for some reason
 				pl->checkCollisions(self, stepDelta); // objects moving up will launch you really high if it's 0.0 but idfk why, THANK YOU ROBERT TOPHAT
@@ -438,7 +457,7 @@ void __fastcall PlayerObject_update_H(PlayerObject* self, void*, float stepDelta
 		else if (step.endStep) PlayerObject_update(self, stepDelta); // revert to click-on-steps mode when buffering to reduce bugs
 
 		if (p2Split) {
-			PlayerObject_update(p2, substepDelta);
+			splitUpdate(p2, substepDelta, firstLoop, p2StepStart);
 			if (!step.endStep) {
 				if (firstLoop && ((p2->m_yVelocity < 0) ^ p2->m_isUpsideDown)) p2->m_isOnGround = p2StartedOnGround;
 				pl->checkCollisions(p2, stepDelta);
@@ -523,8 +542,22 @@ void applyAnticheatFix() {
 	VirtualProtect(addr, 1, old, &old);
 }
 
+MegaHackExt::CheckBox* megaHackToggle = nullptr;
+
 void toggleMod(bool disable) {
 	softToggle.store(disable);
+	if (megaHackToggle) megaHackToggle->set(!disable, false);
+}
+
+void setupMegaHack() {
+	if (!GetModuleHandleA("hackpro.dll")) return;
+
+	megaHackToggle = MegaHackExt::CheckBox::Create("Click Between Frames");
+	megaHackToggle->set(!softToggle.load(), false);
+	megaHackToggle->setCallback([](MegaHackExt::CheckBox*, bool enabled) {
+		reinterpret_cast<void(__thiscall*)(GameManager*, const char*, bool)>(gdBase() + 0xC9B50)(GameManager::sharedState(), "9001", !enabled);
+	});
+	MegaHackExt::Client::commit(megaHackToggle);
 }
 
 // push a value changed in the options page into the running mod
@@ -587,6 +620,8 @@ void modLoaded() {
 	setupOptionsHook();
 
 	MH_EnableHook(MH_ALL_HOOKS);
+
+	setupMegaHack();
 
 	windowsSetup();
 }

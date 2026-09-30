@@ -19,9 +19,11 @@ endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE
   libraries/minhook/include
+  libraries/megahack
 )
 
 add_subdirectory(libraries/minhook)
 add_subdirectory(libraries/cocos-headers)
 
-target_link_libraries(${PROJECT_NAME} minhook cocos2d)
+target_link_libraries(${PROJECT_NAME} minhook cocos2d ${CMAKE_CURRENT_SOURCE_DIR}/libraries/megahack/hackpro.lib delayimp)
+target_link_options(${PROJECT_NAME} PRIVATE /DELAYLOAD:hackpro.dll)
