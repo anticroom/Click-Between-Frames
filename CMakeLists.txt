@@ -31,7 +31,11 @@ target_link_libraries(cbf PRIVATE minhook cocos2d ${CMAKE_CURRENT_SOURCE_DIR}/li
 target_link_libraries(${PROJECT_NAME} cbf)
 target_link_options(${PROJECT_NAME} PRIVATE /DELAYLOAD:hackpro.dll)
 
-if (DEFINED ENV{GEODE_SDK})
+if (DEFINED ENV{GEODE_SDK} AND EXISTS $ENV{GEODE_SDK}/VERSION)
+  file(READ $ENV{GEODE_SDK}/VERSION GEODE_SDK_VERSION)
+endif()
+
+if (GEODE_SDK_VERSION MATCHES "^1\\.")
   add_library(ClickBetweenFramesGeode SHARED src/geode.cpp)
   add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
   target_link_libraries(ClickBetweenFramesGeode cbf)

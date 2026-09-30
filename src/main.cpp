@@ -286,7 +286,13 @@ static void logIdleReason(PlayLayer* playLayer) {
 }
 
 void onFrameStart() {
-	if (!stepsBuilt) {
+	PlayLayer* playLayer = PlayLayer::get();
+
+	static float lastTotalTime = 0.0f;
+	bool levelUpdated = !playLayer || playLayer->m_totalTime != lastTotalTime;
+	if (playLayer) lastTotalTime = playLayer->m_totalTime;
+
+	if (!stepsBuilt && levelUpdated) {
 		enableInput = true;
 		skipUpdate = true;
 		firstFrame = true;
@@ -294,8 +300,6 @@ void onFrameStart() {
 	stepsBuilt = false;
 
 	if (CCDirector::sharedDirector()->getRunningScene()) syncSettingsFromGame();
-
-	PlayLayer* playLayer = PlayLayer::get();
 
 	if (!lateCutoff) {
 		currentFrameTime = getCurrentTimestamp();

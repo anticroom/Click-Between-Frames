@@ -99,7 +99,9 @@ public:
 	bool m_playerDied;                    // 0x39C
 	char m_pad39D[0x494 - 0x39D];
 	bool m_isTestMode;                    // 0x494
-	char m_pad495[0x4BD - 0x495];
+	char m_pad495[0x4B4 - 0x495];
+	float m_totalTime;                    // 0x4B4
+	char m_pad4B8[0x4BD - 0x4B8];
 	bool m_hasLevelCompleteMenu;          // 0x4BD
 	char m_pad4BE[0x52F - 0x4BE];
 	bool m_isPaused;                      // 0x52F
